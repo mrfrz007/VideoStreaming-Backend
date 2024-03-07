@@ -11,4 +11,4 @@ const asyncHandler = (requestHandler) => {
   }
   
   // Export the asyncHandler function for use in other modules
-  export default {asynchandler}
+  export default {asyncHandler}
