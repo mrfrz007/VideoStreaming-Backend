@@ -1,5 +1,9 @@
+import dotenv from "dotenv";
 import mongoose from "mongoose";
 import {DB_NAME} from "../constants.js";
+dotenv.config({
+  path: "./.env",
+});
 // The URI to connect to the MongoDB cluster
 const MONGO_URI  ='mongodb+srv://sayedferaz91:sayedferaz91@cluster0.nnflrsz.mongodb.net';
 
@@ -7,7 +11,7 @@ const MONGO_URI  ='mongodb+srv://sayedferaz91:sayedferaz91@cluster0.nnflrsz.mong
 const connectDB = async () => {
   try {
     // Connect to the MongoDB cluster and the specified database
-    const connectionInstance = await mongoose.connect(`${MONGO_URI}/${DB_NAME}`);
+    const connectionInstance =  await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
     
     // Log the connection details
     console.log(`\n MongoDb connected : ${connectionInstance.connection.host}`);
