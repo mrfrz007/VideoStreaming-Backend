@@ -4,23 +4,25 @@ import ApiResponse from "../utils/apiResponse.js";
 import { ApiError } from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import jwt from "jsonwebtoken";
 
-const generateAccessAndRefereshTokens = async(userId) =>{
+const generateAccessAndRefereshTokens = async (userId) => {
   try {
-      const user = await User.findById(userId)
-      const accessToken = user.generateAccessToken()
-      const refreshToken = user.generateRefreshToken()
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
 
-      user.refreshToken = refreshToken
-      await user.save({ validateBeforeSave: false })
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
 
-      return {accessToken, refreshToken}
-
-
+    return { accessToken, refreshToken };
   } catch (error) {
-      throw new ApiError(500, "Something went wrong while generating referesh and access token")
+    throw new ApiError(
+      500,
+      "Something went wrong while generating referesh and access token"
+    );
   }
-}
+};
 // Register user function
 const registerUser = asyncHandler(async (req, res) => {
   // Get user details from frontend
@@ -164,5 +166,47 @@ const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("accessToken", options)
     .json(new ApiResponse(200, {}, "Logged out Successfully"));
 });
+const getAndSetRefreshToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookie.refreshToken | req.body.refreshToken;
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "unauthorized token");
+  }
+  try {
+    const decodedRefreshToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+    if (!decodedRefreshToken) {
+      throw new ApiError(401, "unauthorized user");
+    }
+    const user = await User.findById(decodedRefreshToken._id);
+    if (!user) {
+      new ApiError(401, " No such user");
+    }
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefereshTokens(user._id);
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "unauthorized user");
+    }
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            accessToken,
+            refreshToken: newRefreshToken,
+          },
+          "token refreshed succesfully"
+        )
+      );
+  } catch (error) {}
+});
 // Export the registerUser function
-export { registerUser, loginUser, logoutUser };
+export { registerUser, loginUser, logoutUser ,getAndSetRefreshToken };
